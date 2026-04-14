@@ -3,7 +3,7 @@ from datetime import datetime
 import pendulum
 
 from pig_pesitos.constants import REPORT_PERIODS
-from pig_pesitos.repositories.database import DatabaseManager, ExpenseRecord
+from pig_pesitos.repositories.database import DatabaseError, DatabaseManager, ExpenseRecord
 
 
 class ReportService:
@@ -25,14 +25,20 @@ class ReportService:
 
     def get_percentage_report_data(self, user_id: int, report_period: str) -> tuple[list[ExpenseRecord], str, float | None]:
         start_range, end_range = self.get_period_range(report_period)
-        expenses = self.db.get_expenses_between(user_id, start_range, end_range, ascending=True)
+        try:
+            expenses = self.db.get_expenses_between(user_id, start_range, end_range, ascending=True)
+            monthly_limit = self.db.get_monthly_limit(user_id)
+        except DatabaseError:
+            raise
         period_label = REPORT_PERIODS.get(report_period, report_period)
-        monthly_limit = self.db.get_monthly_limit(user_id)
         return expenses, period_label, monthly_limit
 
     def get_detailed_report_data(self, user_id: int, report_period: str) -> tuple[list[ExpenseRecord], str, float | None]:
         start_range, end_range = self.get_period_range(report_period)
-        rows = self.db.get_expenses_between(user_id, start_range, end_range, ascending=True)
+        try:
+            rows = self.db.get_expenses_between(user_id, start_range, end_range, ascending=True)
+            monthly_limit = self.db.get_monthly_limit(user_id)
+        except DatabaseError:
+            raise
         period_label = REPORT_PERIODS.get(report_period, report_period)
-        monthly_limit = self.db.get_monthly_limit(user_id)
         return rows, period_label, monthly_limit

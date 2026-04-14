@@ -5,7 +5,7 @@ from telegram.ext import Application, CommandHandler, ConversationHandler, Messa
 from pig_pesitos.config import ConfigError, get_bot_token, get_database_url
 from pig_pesitos.constants import AMOUNT, CATEGORY, CONCEPT, LIMIT_AMOUNT, REPORT_PERIOD, REPORT_TYPE
 from pig_pesitos.bot.handlers import BotHandlers
-from pig_pesitos.repositories.database import DatabaseManager
+from pig_pesitos.repositories.database import DatabaseError, DatabaseManager
 from pig_pesitos.services.expense_service import ExpenseService
 from pig_pesitos.services.report_service import ReportService
 
@@ -18,7 +18,11 @@ logging.basicConfig(
 
 def build_application() -> Application:
     db = DatabaseManager(get_database_url())
-    db.initialize()
+    try:
+        db.initialize()
+    except DatabaseError as error:
+        raise SystemExit(f"Database initialization failed: {error}") from error
+
     handlers = BotHandlers(ExpenseService(db), ReportService(db))
     application = Application.builder().token(get_bot_token()).build()
 

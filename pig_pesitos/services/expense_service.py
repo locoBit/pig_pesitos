@@ -2,7 +2,7 @@ from datetime import datetime
 
 import pendulum
 
-from pig_pesitos.repositories.database import DatabaseManager
+from pig_pesitos.repositories.database import DatabaseError, DatabaseManager
 
 
 class ExpenseService:
@@ -10,13 +10,31 @@ class ExpenseService:
         self.db = db
 
     def create_expense(self, user_id: int, amount: float, concept: str, category: str) -> float:
+        """Create an expense and return the updated category total.
+
+        Any low-level database errors are surfaced as DatabaseError so callers
+        can decide how to react (e.g. show a friendly message instead of
+        crashing the bot).
+        """
+
         timestamp = pendulum.now("UTC")
-        self.db.insert_expense(user_id, amount, concept, category.lower(), timestamp)
-        return self.db.get_category_total(user_id, category.lower())
+        try:
+            self.db.insert_expense(user_id, amount, concept, category.lower(), timestamp)
+            return self.db.get_category_total(user_id, category.lower())
+        except DatabaseError:
+            # Bubble up; handler layer is responsible for translating this to
+            # user-facing errors. Keeping this layer thin preserves SRP.
+            raise
 
     def set_monthly_limit(self, user_id: int, amount: float) -> None:
         timestamp: datetime = pendulum.now("UTC")
-        self.db.upsert_monthly_limit(user_id, amount, timestamp)
+        try:
+            self.db.upsert_monthly_limit(user_id, amount, timestamp)
+        except DatabaseError:
+            raise
 
     def get_monthly_limit(self, user_id: int) -> float | None:
-        return self.db.get_monthly_limit(user_id)
+        try:
+            return self.db.get_monthly_limit(user_id)
+        except DatabaseError:
+            raise

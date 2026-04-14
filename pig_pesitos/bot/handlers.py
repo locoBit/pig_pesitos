@@ -17,6 +17,7 @@ from pig_pesitos.constants import (
 )
 from pig_pesitos.services.expense_service import ExpenseService
 from pig_pesitos.services.report_service import ReportService
+from pig_pesitos.repositories.database import DatabaseError
 from pig_pesitos.utils.reporting import build_pdf_report, format_timestamp
 from pig_pesitos.utils.request import end_request, get_request_id, start_request
 from pig_pesitos.validators import is_valid_category, validate_amount, validate_concept, validate_limit_amount
@@ -130,7 +131,17 @@ class BotHandlers:
             )
             return CATEGORY
 
-        category_total = self.expense_service.create_expense(user_id, amount, concept, category)
+        try:
+            category_total = self.expense_service.create_expense(user_id, amount, concept, category)
+        except DatabaseError:
+            logger.exception("[%s][user=%s] Error al guardar el gasto", request_id, user_id)
+            await update.message.reply_text(
+                "⚠️ No pudimos guardar tu gasto por un problema temporal con la base de datos. "
+                "Intenta nuevamente más tarde."
+            )
+            end_request(context)
+            return ConversationHandler.END
+
         logger.info(
             "[%s][user=%s] Gasto almacenado: monto=%.2f concepto=%s categoría=%s",
             request_id,
@@ -225,7 +236,15 @@ class BotHandlers:
         return ConversationHandler.END
 
     async def percentage_report(self, update: Update, user_id: int, report_period: str, request_id: str) -> None:
-        expenses, period_label, monthly_limit = self.report_service.get_percentage_report_data(user_id, report_period)
+        try:
+            expenses, period_label, monthly_limit = self.report_service.get_percentage_report_data(user_id, report_period)
+        except DatabaseError:
+            logger.exception("[%s][user=%s] Error al obtener datos para reporte porcentual", request_id, user_id)
+            await update.message.reply_text(
+                "⚠️ No pudimos obtener tu reporte por un problema temporal con la base de datos. "
+                "Intenta nuevamente más tarde."
+            )
+            return
         limit_text = format_monthly_limit(monthly_limit)
         logger.info("[%s][user=%s] %d gastos encontrados para reporte porcentual", request_id, user_id, len(expenses))
         if not expenses:
@@ -251,7 +270,15 @@ class BotHandlers:
         await update.message.reply_text(message, parse_mode="Markdown")
 
     async def detailed_report(self, update: Update, user_id: int, report_period: str, request_id: str) -> None:
-        rows, period_label, monthly_limit = self.report_service.get_detailed_report_data(user_id, report_period)
+        try:
+            rows, period_label, monthly_limit = self.report_service.get_detailed_report_data(user_id, report_period)
+        except DatabaseError:
+            logger.exception("[%s][user=%s] Error al obtener datos para reporte detallado", request_id, user_id)
+            await update.message.reply_text(
+                "⚠️ No pudimos obtener tu reporte detallado por un problema temporal con la base de datos. "
+                "Intenta nuevamente más tarde."
+            )
+            return
         limit_text = format_monthly_limit(monthly_limit)
         logger.info("[%s][user=%s] %d gastos encontrados para reporte detallado", request_id, user_id, len(rows))
         if not rows:
@@ -330,7 +357,17 @@ class BotHandlers:
             await update.message.reply_text(error_message)
             return LIMIT_AMOUNT
 
-        self.expense_service.set_monthly_limit(user_id, amount)
+        try:
+            self.expense_service.set_monthly_limit(user_id, amount)
+        except DatabaseError:
+            logger.exception("[%s][user=%s] Error al actualizar el límite mensual", request_id, user_id)
+            await update.message.reply_text(
+                "⚠️ No pudimos actualizar tu límite mensual por un problema temporal. "
+                "Intenta nuevamente más tarde."
+            )
+            end_request(context)
+            return ConversationHandler.END
+
         logger.info("[%s][user=%s] Límite mensual actualizado: %.2f", request_id, user_id, amount)
         await update.message.reply_text(
             f"✅ Tu límite mensual quedó establecido en ${amount:.2f}. Puedes actualizarlo cuando quieras usando /limite."
