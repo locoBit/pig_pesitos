@@ -61,3 +61,7 @@ def main() -> None:
     except ConfigError as error:
         raise SystemExit(str(error)) from error
     application.run_polling()
+
+
+if __name__ == "__main__":
+    main()

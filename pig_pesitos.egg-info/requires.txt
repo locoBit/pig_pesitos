@@ -1,0 +1,12 @@
+python-telegram-bot<22,>=21
+pendulum<4,>=3
+psycopg[binary]<4,>=3.2
+python-dotenv<2,>=1
+reportlab<5,>=4
+
+[dev]
+pytest<9,>=8
+pytest-asyncio<1,>=0.23
+ruff<1,>=0.6
+black<25,>=24
+mypy<2,>=1.11

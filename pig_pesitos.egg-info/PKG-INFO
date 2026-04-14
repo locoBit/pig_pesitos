@@ -1,3 +1,22 @@
+Metadata-Version: 2.4
+Name: pig-pesitos
+Version: 0.1.0
+Summary: Telegram bot for tracking personal expenses and generating reports
+Author: locobit
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+Requires-Dist: python-telegram-bot<22,>=21
+Requires-Dist: pendulum<4,>=3
+Requires-Dist: psycopg[binary]<4,>=3.2
+Requires-Dist: python-dotenv<2,>=1
+Requires-Dist: reportlab<5,>=4
+Provides-Extra: dev
+Requires-Dist: pytest<9,>=8; extra == "dev"
+Requires-Dist: pytest-asyncio<1,>=0.23; extra == "dev"
+Requires-Dist: ruff<1,>=0.6; extra == "dev"
+Requires-Dist: black<25,>=24; extra == "dev"
+Requires-Dist: mypy<2,>=1.11; extra == "dev"
+
 # Pig Pesitos
 
 Pig Pesitos is a Telegram bot for tracking personal expenses, setting a monthly spending limit, and generating simple reports.

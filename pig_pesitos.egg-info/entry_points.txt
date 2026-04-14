@@ -1,0 +1,2 @@
+[console_scripts]
+pig-pesitos = pig_pesitos.bot.app:main
