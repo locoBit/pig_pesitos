@@ -94,6 +94,29 @@ The project includes a `docker-compose.yml` file with a local PostgreSQL service
 - user: `pigpesitos`
 - password: `pigpesitos`
 
+## Database migrations
+
+The project uses Alembic for schema migrations. Basic workflow:
+
+- Make sure `DATABASE_URL` points to the target PostgreSQL database
+- Run all migrations to the latest version:
+
+```bash
+make db-upgrade
+```
+
+If you need to create a new migration (for example after editing the schema):
+
+```bash
+make db-revision NAME="short description of change"
+# then edit the generated file under alembic/versions/
+make db-upgrade
+```
+
+For local hacking and tests you can still rely on the legacy `DatabaseManager.initialize()`
+bootstrap, but **production deployments should use Alembic migrations as the source of
+truth for the schema**.
+
 ## Dependency management
 
 This project now uses `pyproject.toml` as the source of truth for dependency and tooling configuration.

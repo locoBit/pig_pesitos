@@ -57,6 +57,13 @@ class DatabaseManager:
         raise DatabaseError("Error connecting to the database") from last_error
 
     def initialize(self) -> None:
+        """Legacy schema initializer.
+
+        New deployments should rely on Alembic migrations instead of calling
+        this method. It is kept for backwards compatibility and for simple
+        local/test setups where running migrations might be overkill.
+        """
+
         category_values = ", ".join(f"'{category}'" for category in VALID_CATEGORIES)
         try:
             with self._connect() as conn, conn.cursor() as cursor:

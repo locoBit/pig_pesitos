@@ -1,8 +1,9 @@
 PYTHON ?= python3
 PIP ?= $(PYTHON) -m pip
 COMPOSE ?= docker compose
+ALEMBIC ?= alembic
 
-.PHONY: install install-dev db-up db-down db-reset db-logs migrate run
+.PHONY: install install-dev db-up db-down db-reset db-logs migrate run db-upgrade db-revision
 
 install:
 	$(PIP) install -e .
@@ -24,6 +25,12 @@ db-logs:
 
 migrate:
 	$(PYTHON) migrate_sqlite_to_postgres.py
+
+db-upgrade:
+	$(ALEMBIC) upgrade head
+
+db-revision:
+	$(ALEMBIC) revision -m "${NAME}"
 
 run:
 	$(PYTHON) -m pig_pesitos.bot.app

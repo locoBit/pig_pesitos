@@ -65,7 +65,7 @@ Future tasks for the Pig Pesitos bot so nothing important gets lost in the sauce
   - Pin dependency versions
   - Separate production and development dependencies if needed
 
-- [ ] Add database migrations
+- [x] Add database migrations
   - Use a migration tool such as Alembic
   - Version schema changes instead of editing tables ad hoc
 
