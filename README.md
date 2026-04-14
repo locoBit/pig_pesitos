@@ -83,6 +83,21 @@ The project includes a `docker-compose.yml` file with a local PostgreSQL service
 - `DATABASE_URL`: PostgreSQL connection string
 - `SQLITE_DB_PATH`: path to the legacy SQLite database for migration
 
+## Project structure
+
+```text
+pig_pesitos/
+├── bot/            # Telegram application wiring and handlers
+├── repositories/   # Database access layer
+├── services/       # Business logic
+├── utils/          # Shared helpers
+├── config.py       # Environment-based configuration
+├── constants.py    # Conversation states and fixed values
+└── validators.py   # Input validation helpers
+```
+
+Top-level files such as `claude.py`, `config.py`, and `database_manager.py` are thin compatibility wrappers so existing commands keep working.
+
 ## Notes
 
 - Do not commit `.env` or database files
