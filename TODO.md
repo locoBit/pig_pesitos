@@ -69,7 +69,7 @@ Future tasks for the Pig Pesitos bot so nothing important gets lost in the sauce
   - Use a migration tool such as Alembic
   - Version schema changes instead of editing tables ad hoc
 
-- [ ] Add logging and monitoring improvements
+- [x] Add logging and monitoring improvements
   - Avoid logging sensitive user data unnecessarily
   - Add structured logs where useful
   - Track bot errors and critical failures

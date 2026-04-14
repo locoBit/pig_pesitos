@@ -19,5 +19,6 @@ pig_pesitos/services/__init__.py
 pig_pesitos/services/expense_service.py
 pig_pesitos/services/report_service.py
 pig_pesitos/utils/__init__.py
+pig_pesitos/utils/monitoring.py
 pig_pesitos/utils/reporting.py
 pig_pesitos/utils/request.py

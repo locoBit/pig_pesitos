@@ -114,7 +114,7 @@ class BotHandlers:
         request_id = get_request_id(context)
         user_id = update.effective_user.id
         text = update.message.text.strip()
-        logger.info("[%s][user=%s] Validando monto ingresado: %s", request_id, user_id, text)
+        logger.info("[%s][user=%s] Validando monto ingresado", request_id, user_id)
 
         is_valid, error_message, amount = validate_amount(text)
         if not is_valid:
@@ -134,7 +134,7 @@ class BotHandlers:
         request_id = get_request_id(context)
         user_id = update.effective_user.id
         concept = update.message.text.strip()
-        logger.info("[%s][user=%s] Validando concepto: %s", request_id, user_id, concept)
+        logger.info("[%s][user=%s] Validando concepto", request_id, user_id)
 
         is_valid, error_message = validate_concept(concept)
         if not is_valid:
@@ -392,7 +392,7 @@ class BotHandlers:
         request_id = get_request_id(context)
         user_id = update.effective_user.id
         text = update.message.text.strip()
-        logger.info("[%s][user=%s] Validando límite mensual ingresado: %s", request_id, user_id, text)
+        logger.info("[%s][user=%s] Validando límite mensual ingresado", request_id, user_id)
         is_valid, error_message, amount = validate_limit_amount(text)
         if not is_valid:
             logger.warning("[%s][user=%s] Formato inválido para límite", request_id, user_id)

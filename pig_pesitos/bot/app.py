@@ -1,8 +1,10 @@
 import logging
+import os
 
 from telegram.ext import Application, CommandHandler, ConversationHandler, MessageHandler, filters
 
 from pig_pesitos.config import ConfigError, get_bot_token, get_database_url
+from pig_pesitos.utils.monitoring import init_sentry
 from pig_pesitos.constants import AMOUNT, CATEGORY, CONCEPT, LIMIT_AMOUNT, REPORT_PERIOD, REPORT_TYPE, FORGET_CONFIRM
 from pig_pesitos.bot.handlers import BotHandlers
 from pig_pesitos.repositories.database import DatabaseError, DatabaseManager
@@ -10,13 +12,33 @@ from pig_pesitos.services.expense_service import ExpenseService
 from pig_pesitos.services.report_service import ReportService
 
 
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
+
 logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    level=logging.INFO,
+    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+    level=getattr(logging, LOG_LEVEL, logging.INFO),
 )
+logger = logging.getLogger(__name__)
+
+
+async def log_error(update, context) -> None:  # type: ignore[no-untyped-def]
+    """Global error handler for unexpected exceptions in Telegram handlers."""
+
+    # Avoid logging full update contents to keep logs privacy-friendly
+    user_id = None
+    if update and getattr(update, "effective_user", None):
+        user_id = update.effective_user.id  # type: ignore[union-attr]
+
+    logger.exception(
+        "Unhandled error in handler [user=%s]: %s",
+        user_id,
+        getattr(context, "error", None),
+    )
 
 
 def build_application() -> Application:
+    init_sentry()
+
     db = DatabaseManager(get_database_url())
     try:
         db.initialize()
@@ -25,6 +47,7 @@ def build_application() -> Application:
 
     handlers = BotHandlers(ExpenseService(db), ReportService(db))
     application = Application.builder().token(get_bot_token()).build()
+    application.add_error_handler(log_error)
 
     expense_conversation_handler = ConversationHandler(
         entry_points=[CommandHandler("gasto", handlers.expense_command)],

@@ -94,6 +94,21 @@ The project includes a `docker-compose.yml` file with a local PostgreSQL service
 - user: `pigpesitos`
 - password: `pigpesitos`
 
+## Logging & monitoring
+
+- Logs are written to stdout with a simple structured-ish format:
+  `%(asctime)s %(levelname)s [%(name)s] %(message)s`
+- You can control the log level with the `LOG_LEVEL` environment variable
+  (defaults to `INFO`). Valid values are standard Python levels such as `DEBUG`,
+  `INFO`, `WARNING`, `ERROR`.
+- Handlers log a per-request `request_id` and the numeric Telegram `user_id`,
+  but avoid including raw user-provided texts in error logs.
+- A global error handler captures unexpected exceptions from Telegram
+  handlers and logs them with context.
+- Optional Sentry integration is available:
+  - Set `SENTRY_DSN` to enable error reporting
+  - Optionally set `SENTRY_ENVIRONMENT` (default: `development`)
+
 ## Database migrations
 
 The project uses Alembic for schema migrations. Basic workflow:
