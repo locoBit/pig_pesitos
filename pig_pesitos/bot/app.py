@@ -3,7 +3,7 @@ import logging
 from telegram.ext import Application, CommandHandler, ConversationHandler, MessageHandler, filters
 
 from pig_pesitos.config import ConfigError, get_bot_token, get_database_url
-from pig_pesitos.constants import AMOUNT, CATEGORY, CONCEPT, LIMIT_AMOUNT, REPORT_PERIOD, REPORT_TYPE
+from pig_pesitos.constants import AMOUNT, CATEGORY, CONCEPT, LIMIT_AMOUNT, REPORT_PERIOD, REPORT_TYPE, FORGET_CONFIRM
 from pig_pesitos.bot.handlers import BotHandlers
 from pig_pesitos.repositories.database import DatabaseError, DatabaseManager
 from pig_pesitos.services.expense_service import ExpenseService
@@ -50,12 +50,20 @@ def build_application() -> Application:
         },
         fallbacks=[CommandHandler("cancelar", handlers.cancel)],
     )
+    forget_conversation_handler = ConversationHandler(
+        entry_points=[CommandHandler("olvidame", handlers.forget_me)],
+        states={
+            FORGET_CONFIRM: [MessageHandler(filters.TEXT & ~filters.COMMAND, handlers.forget_me_confirm)],
+        },
+        fallbacks=[CommandHandler("cancelar", handlers.cancel)],
+    )
 
     application.add_handler(CommandHandler("start", handlers.start))
     application.add_handler(CommandHandler("cancelar", handlers.cancel))
     application.add_handler(expense_conversation_handler)
     application.add_handler(report_conversation_handler)
     application.add_handler(limit_conversation_handler)
+    application.add_handler(forget_conversation_handler)
     return application
 
 

@@ -111,6 +111,28 @@ For production-oriented installs, prefer installing the package itself instead o
 - `DATABASE_URL`: PostgreSQL connection string
 - `SQLITE_DB_PATH`: path to the legacy SQLite database for migration
 
+## Data privacy & retention
+
+This project is primarily intended for personal use and small-scale deployments, but it still tries to be reasonable about privacy:
+
+- **What is stored**
+  - Your Telegram numeric `user_id` (no name, username, or phone number)
+  - Your expenses: amount, concept, category, and timestamp
+  - Your optional monthly spending limit
+- **Why it is stored**
+  - To separate data between different Telegram users
+  - To compute totals and generate reports over time
+- **Retention policy**
+  - Data is kept until you explicitly delete it or the database is reset
+  - You can delete all your data at any time with the `/olvidame` command in the bot
+  - Deletion is a **hard delete** at the application level; there is no in-app recovery
+- **Logs**
+  - Logs include your numeric `user_id` for debugging flows, but avoid storing names or usernames
+  - For production setups, you should review and harden logging according to your own policies
+- **If you go public**
+  - This README section is not a formal legal privacy policy
+  - If you expose the bot to the public, you should publish a proper privacy notice that explains who operates the bot, where data is stored, and how users can exercise their rights
+
 ## Project structure
 
 ```text

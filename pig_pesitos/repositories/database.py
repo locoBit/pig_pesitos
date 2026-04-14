@@ -199,6 +199,23 @@ class DatabaseManager:
             logger.exception("Error updating monthly limit: %s", error)
             raise DatabaseError("Error updating monthly limit") from error
 
+    def delete_user_data(self, user_id: int) -> None:
+        """Delete all persisted data for a given user.
+
+        This supports basic data privacy / "forget me" flows. It is a hard
+        delete; there is no recovery from this operation at the application
+        level.
+        """
+
+        try:
+            with self._connect() as conn, conn.cursor() as cursor:
+                cursor.execute("DELETE FROM expense WHERE user_id = %s", (user_id,))
+                cursor.execute("DELETE FROM monthly_limit WHERE user_id = %s", (user_id,))
+                conn.commit()
+        except psycopg.Error as error:  # pragma: no cover - network/infra
+            logger.exception("Error deleting user data: %s", error)
+            raise DatabaseError("Error deleting user data") from error
+
     def healthcheck(self) -> dict[str, Any]:
         try:
             with self._connect() as conn, conn.cursor() as cursor:

@@ -38,3 +38,14 @@ class ExpenseService:
             return self.db.get_monthly_limit(user_id)
         except DatabaseError:
             raise
+
+    def delete_user_data(self, user_id: int) -> None:
+        """Permanently delete all data associated with a user.
+
+        This is intended to support basic "forget me" / privacy flows.
+        """
+
+        try:
+            self.db.delete_user_data(user_id)
+        except DatabaseError:
+            raise

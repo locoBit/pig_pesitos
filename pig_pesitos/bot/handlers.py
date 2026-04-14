@@ -14,6 +14,7 @@ from pig_pesitos.constants import (
     REPORT_TYPE,
     REPORT_TYPES,
     VALID_CATEGORIES,
+    FORGET_CONFIRM,
 )
 from pig_pesitos.services.expense_service import ExpenseService
 from pig_pesitos.services.report_service import ReportService
@@ -371,6 +372,82 @@ class BotHandlers:
         logger.info("[%s][user=%s] Límite mensual actualizado: %.2f", request_id, user_id, amount)
         await update.message.reply_text(
             f"✅ Tu límite mensual quedó establecido en ${amount:.2f}. Puedes actualizarlo cuando quieras usando /limite."
+        )
+        end_request(context)
+        return ConversationHandler.END
+
+    async def forget_me(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+        """Entry point for the /olvidame flow.
+
+        Asks for an explicit confirmation before deleting any data.
+        """
+
+        request_id = start_request(context)
+        user_id = update.effective_user.id
+        logger.info("[%s][user=%s] Inicio de flujo /olvidame", request_id, user_id)
+
+        keyboard = ReplyKeyboardMarkup(
+            [["Sí, borrar todo", "No, cancelar"]],
+            one_time_keyboard=True,
+            resize_keyboard=True,
+        )
+        await update.message.reply_text(
+            "⚠️ Esta acción borrará *todos* tus gastos y tu límite mensual asociados a este chat. "
+            "No habrá forma de recuperar esta información más adelante.\n\n"
+            "Si estás seguro, elige *Sí, borrar todo*.",
+            parse_mode="Markdown",
+            reply_markup=keyboard,
+        )
+        return FORGET_CONFIRM
+
+    async def forget_me_confirm(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+        """Confirmation step for /olvidame.
+
+        Only performs the deletion when the user explicitly confirms.
+        """
+
+        request_id = get_request_id(context)
+        user_id = update.effective_user.id
+        response = update.message.text.strip().lower()
+        logger.info("[%s][user=%s] Respuesta de confirmación /olvidame: %s", request_id, user_id, response)
+
+        if response not in {"sí, borrar todo", "si, borrar todo", "no, cancelar"}:
+            await update.message.reply_text(
+                "Por favor selecciona una de las opciones disponibles.",
+                reply_markup=ReplyKeyboardMarkup(
+                    [["Sí, borrar todo", "No, cancelar"]],
+                    one_time_keyboard=True,
+                    resize_keyboard=True,
+                ),
+            )
+            return FORGET_CONFIRM
+
+        if response in {"no, cancelar"}:
+            logger.info("[%s][user=%s] Usuario canceló la eliminación de datos", request_id, user_id)
+            await update.message.reply_text(
+                "Perfecto, no borramos nada. Tus datos siguen intactos.",
+                reply_markup=ReplyKeyboardRemove(),
+            )
+            end_request(context)
+            return ConversationHandler.END
+
+        # User confirmed deletion
+        try:
+            self.expense_service.delete_user_data(user_id)
+        except DatabaseError:
+            logger.exception("[%s][user=%s] Error al eliminar los datos del usuario", request_id, user_id)
+            await update.message.reply_text(
+                "⚠️ No pudimos borrar tus datos por un problema temporal con la base de datos. "
+                "Intenta nuevamente más tarde.",
+                reply_markup=ReplyKeyboardRemove(),
+            )
+            end_request(context)
+            return ConversationHandler.END
+
+        await update.message.reply_text(
+            "✅ Listo. Borramos todos tus gastos y tu límite mensual asociados a este chat. "
+            "No podremos recuperar esta información más adelante.",
+            reply_markup=ReplyKeyboardRemove(),
         )
         end_request(context)
         return ConversationHandler.END
