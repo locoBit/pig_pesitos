@@ -39,6 +39,35 @@ class ExpenseService:
         except DatabaseError:
             raise
 
+    def get_monthly_usage(self, user_id: int) -> tuple[float | None, float]:
+        """Return (monthly_limit, total_spent_this_month).
+
+        If the user has no monthly limit configured, the first element will be
+        None and the total will be 0.0.
+        """
+
+        try:
+            limit = self.db.get_monthly_limit(user_id)
+        except DatabaseError:
+            raise
+
+        if limit is None:
+            return None, 0.0
+
+        now = pendulum.now("UTC")
+        start = now.start_of("month")
+        end = now.end_of("month")
+
+        try:
+            expenses = self.db.get_expenses_between(user_id, start, end, ascending=True)
+        except DatabaseError:
+            raise
+
+        total = 0.0
+        for expense in expenses:
+            total += float(expense.amount)
+        return limit, total
+
     def delete_user_data(self, user_id: int) -> None:
         """Permanently delete all data associated with a user.
 

@@ -51,6 +51,43 @@ class BotHandlers:
         self.expense_service = expense_service
         self.report_service = report_service
 
+    async def _check_monthly_limit_and_warn(
+        self,
+        update: Update,
+        user_id: int,
+        request_id: str,
+    ) -> None:
+        """Check current monthly usage against the limit and warn if >= 90%.
+
+        This helper is used after creating an expense and after updating the
+        monthly limit so the user gets feedback in both flows.
+        """
+
+        try:
+            limit, total = self.expense_service.get_monthly_usage(user_id)
+        except DatabaseError:
+            logger.exception(
+                "[%s][user=%s] Error al calcular el uso mensual", request_id, user_id
+            )
+            return
+
+        if limit is None or limit <= 0:
+            return
+
+        usage_ratio = total / limit
+        if usage_ratio >= 0.9:
+            logger.info(
+                "[%s][user=%s] Usuario cerca de su límite mensual: total=%.2f, limit=%.2f",
+                request_id,
+                user_id,
+                total,
+                limit,
+            )
+            await update.message.reply_text(
+                "⚠️ Ojo: ya usaste más del 90% de tu límite mensual. "
+                f"Llevas ${total:.2f} de ${limit:.2f}.",
+            )
+
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         request_id = start_request(context)
         user = update.effective_user
@@ -160,6 +197,10 @@ class BotHandlers:
             f"Para agregar otro gasto, usa /gasto otra vez.",
             reply_markup=ReplyKeyboardRemove(),
         )
+
+        # Check monthly limit usage after recording the expense
+        await self._check_monthly_limit_and_warn(update, user_id, request_id)
+
         context.user_data.clear()
         end_request(context)
         logger.info("[%s][user=%s] Registro de gasto completado", request_id, user_id)
@@ -373,6 +414,10 @@ class BotHandlers:
         await update.message.reply_text(
             f"✅ Tu límite mensual quedó establecido en ${amount:.2f}. Puedes actualizarlo cuando quieras usando /limite."
         )
+
+        # If the user ya tenía gastos, avisamos si el nuevo límite ya está casi lleno
+        await self._check_monthly_limit_and_warn(update, user_id, request_id)
+
         end_request(context)
         return ConversationHandler.END
 
