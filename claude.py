@@ -1,44 +1,24 @@
 import logging
 import os
-import sqlite3
 import re
-import tempfile
-import uuid
 from datetime import datetime
-from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, ConversationHandler
+
 import pendulum
+from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
+from telegram.ext import (
+    Application,
+    CommandHandler,
+    ContextTypes,
+    ConversationHandler,
+    MessageHandler,
+    filters,
+)
 
-try:
-    from reportlab.lib.pagesizes import letter
-    from reportlab.pdfgen import canvas
-    REPORT_PDF_ENABLED = True
-except ImportError:
-    REPORT_PDF_ENABLED = False
+from config import ConfigError, get_bot_token, get_database_url
+from database_manager import DatabaseManager, VALID_CATEGORIES
+from report_utils import build_pdf_report, format_timestamp
+from request_utils import end_request, get_request_id, start_request
 
-conn = sqlite3.connect('expense_data.db')
-cursor = conn.cursor()
-
-# Create table if it doesn't exist
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS expense (
-        user_id REAL,
-        amount REAL,
-        concept TEXT,
-        category INTEGER,
-        timestamp TEXT,
-        PRIMARY KEY (user_id, timestamp)
-    )
-''')
-
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS monthly_limit (
-        user_id REAL PRIMARY KEY,
-        limit_amount REAL NOT NULL,
-        updated_at TEXT NOT NULL
-    )
-''')
-conn.commit()
 
 # Enable logging
 logging.basicConfig(
@@ -46,23 +26,6 @@ logging.basicConfig(
     level=logging.INFO
 )
 logger = logging.getLogger(__name__)
-
-
-def _start_request(context: ContextTypes.DEFAULT_TYPE) -> str:
-    request_id = uuid.uuid4().hex
-    context.chat_data["request_id"] = request_id
-    return request_id
-
-
-def _get_request_id(context: ContextTypes.DEFAULT_TYPE) -> str:
-    request_id = context.chat_data.get("request_id")
-    if not request_id:
-        request_id = _start_request(context)
-    return request_id
-
-
-def _end_request(context: ContextTypes.DEFAULT_TYPE) -> None:
-    context.chat_data.pop("request_id", None)
 
 # Define conversation states
 AMOUNT = 0
@@ -72,16 +35,14 @@ REPORT_PERIOD = 0
 REPORT_TYPE = 1
 LIMIT_AMOUNT = 3
 
-# Lista oficial de categorías de gasto
-VALID_CATEGORIES = [
-    "transporte",
-    "vestimenta",
-    "alimentos",
-    "entretenimiento",
-    "servicios",
-    "salud",
-    "otros",
-]
+db: DatabaseManager | None = None
+
+
+def _get_db() -> DatabaseManager:
+    global db
+    if db is None:
+        db = DatabaseManager(get_database_url())
+    return db
 
 REPORT_PERIODS = {
     "day": "el día de hoy", 
@@ -95,99 +56,29 @@ REPORT_TYPES = {
 }
 
 
-def _get_period_range(report_period: str) -> tuple[str, str]:
-    now = pendulum.now()
+def _get_period_range(report_period: str) -> tuple[datetime, datetime]:
+    now = pendulum.now("UTC")
 
     if report_period == "week":
-        start = now.start_of('week')
-        end = now.end_of('week')
+        start = now.start_of("week")
+        end = now.end_of("week")
     elif report_period == "month":
-        start = now.start_of('month')
-        end = now.end_of('month')
+        start = now.start_of("month")
+        end = now.end_of("month")
     else:
-        start = now.start_of('day')
-        end = now.end_of('day')
+        start = now.start_of("day")
+        end = now.end_of("day")
 
-    return start.to_datetime_string(), end.to_datetime_string()
-
-
-def _get_monthly_limit(user_id: int) -> float | None:
-    cursor.execute(
-        'SELECT limit_amount FROM monthly_limit WHERE user_id = ?',
-        (user_id,)
-    )
-    row = cursor.fetchone()
-    return row[0] if row else None
+    return start, end
 
 
 def _format_monthly_limit(limit_value: float | None) -> str:
     return f"${limit_value:.2f}" if limit_value is not None else "No definido"
 
 
-def _build_pdf_report(rows, period_label, limit_text):
-    if not REPORT_PDF_ENABLED:
-        logger.warning(
-            "No se pudo generar el PDF: la librería 'reportlab' no está instalada."
-        )
-        return None
-
-    tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
-    tmp_file.close()
-    pdf_path = tmp_file.name
-
-    c = canvas.Canvas(pdf_path, pagesize=letter)
-    width, height = letter
-    margin = 40
-    y_position = height - margin
-
-    headers = ["#", "Monto", "Concepto", "Categoría", "Fecha"]
-    column_widths = [30, 80, 150, 120, 140]
-
-    def draw_page_header():
-        nonlocal y_position
-        c.setFont("Helvetica-Bold", 14)
-        c.drawString(margin, y_position, f"Reporte detallado ({period_label})")
-        y_position -= 25
-        c.setFont("Helvetica", 11)
-        c.drawString(margin, y_position, f"Límite mensual: {limit_text}")
-        y_position -= 20
-        draw_row(headers, bold=True, skip_check=True)
-
-    def draw_row(values, bold=False, skip_check=False):
-        nonlocal y_position
-        if not skip_check and y_position < margin + 40:
-            c.showPage()
-            y_position = height - margin
-            draw_page_header()
-        c.setFont("Helvetica-Bold" if bold else "Helvetica", 10)
-        x = margin
-        for value, width_col in zip(values, column_widths):
-            c.drawString(x, y_position, str(value))
-            x += width_col
-        y_position -= 18
-
-    draw_page_header()
-
-    total_amount = 0.0
-    for idx, (amount, concept, category, timestamp) in enumerate(rows, start=1):
-        draw_row([
-            idx,
-            f"${amount:.2f}",
-            concept,
-            category.capitalize(),
-            timestamp
-        ])
-        total_amount += amount
-
-    draw_row(["", "", "", "Total", f"${total_amount:.2f}"], bold=True)
-
-    c.save()
-    return pdf_path
-
-
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a welcome message when the command /start is issued."""
-    request_id = _start_request(context)
+    request_id = start_request(context)
     user = update.effective_user
     logger.info("[%s][user=%s] /start command invoked", request_id, user.id)
     await update.message.reply_text(
@@ -197,11 +88,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         f"Usa /limite para definir un límite de gastos mensual.\n"
         f"Usa /cancelar en cualquier comento para cancelar la operación"
     )
-    _end_request(context)
+    end_request(context)
 
 async def expense_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Start the expense conversation and ask for amount."""
-    request_id = _start_request(context)
+    request_id = start_request(context)
     user_id = update.effective_user.id
     logger.info("[%s][user=%s] Inicio de captura de gasto", request_id, user_id)
     await update.message.reply_text(
@@ -211,7 +102,7 @@ async def expense_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
 async def amount_input(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Validate and store the amount, then ask for concept."""
-    request_id = _get_request_id(context)
+    request_id = get_request_id(context)
     user_id = update.effective_user.id
     text = update.message.text.strip()
     logger.info("[%s][user=%s] Validando monto ingresado: %s", request_id, user_id, text)
@@ -257,7 +148,7 @@ async def amount_input(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
 
 async def concept_input(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Validate and store the concept, then ask for category."""
-    request_id = _get_request_id(context)
+    request_id = get_request_id(context)
     user_id = update.effective_user.id
     concept = update.message.text.strip()
     logger.info("[%s][user=%s] Validando concepto: %s", request_id, user_id, concept)
@@ -303,7 +194,7 @@ async def concept_input(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
 
 async def category_input(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Validate and store the category, then save the complete expense."""
-    request_id = _get_request_id(context)
+    request_id = get_request_id(context)
     user_id = update.effective_user.id
     category = update.message.text.strip().lower()
     logger.info("[%s][user=%s] Categoría recibida: %s", request_id, user_id, category)
@@ -330,25 +221,20 @@ async def category_input(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return CATEGORY
     
     # Insert the expense amount with concept, category, and timestamp in the database
-    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    cursor.execute('''
-        INSERT INTO expense (user_id, amount, concept, category, timestamp) 
-        VALUES (?, ?, ?, ?, ?)
-    ''', (user_id, amount, concept, category.lower(), timestamp))
-    conn.commit()
+    timestamp = pendulum.now("UTC")
+    _get_db().insert_expense(user_id, amount, concept, category.lower(), timestamp)
     logger.info(
         "[%s][user=%s] Gasto almacenado: monto=%.2f concepto=%s categoría=%s",
         request_id,
         user_id,
         amount,
         concept,
-        category
+        category,
     )
 
     # Calculate total spent in this category
     # TODO add the today filter
-    cursor.execute('SELECT SUM(amount) FROM expense WHERE user_id = ? AND category = ?', (user_id, category.lower()))
-    category_total = cursor.fetchone()[0]
+    category_total = _get_db().get_category_total(user_id, category.lower())
     
     await update.message.reply_text(
         f"✅ El gasto se agregó exitosamente!\n"
@@ -362,13 +248,13 @@ async def category_input(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     
     # Clear user data
     context.user_data.clear()
-    _end_request(context)
+    end_request(context)
     logger.info("[%s][user=%s] Registro de gasto completado", request_id, user_id)
     return ConversationHandler.END
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Cancel the expense entry."""
-    request_id = _get_request_id(context)
+    request_id = get_request_id(context)
     user_id = update.effective_user.id
     logger.info("[%s][user=%s] Operación cancelada por el usuario", request_id, user_id)
     context.user_data.clear()
@@ -376,12 +262,12 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         "El gasto fue cancelado. Usa /gasto para iniciar otra vez.",
         reply_markup=ReplyKeyboardRemove()
     )
-    _end_request(context)
+    end_request(context)
     return ConversationHandler.END
 
 
 async def report_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    request_id = _start_request(context)
+    request_id = start_request(context)
     user_id = update.effective_user.id
     logger.info("[%s][user=%s] Inicio de flujo de reportes", request_id, user_id)
     keyboard = [[label.capitalize()] for idx, (key, label) in enumerate(REPORT_PERIODS.items())]
@@ -398,7 +284,7 @@ async def report_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     return REPORT_PERIOD
 
 async def report_period_input(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    request_id = _get_request_id(context)
+    request_id = get_request_id(context)
     user_id = update.effective_user.id
     report_period_label = update.message.text.strip().lower()
     logger.info("[%s][user=%s] Periodo seleccionado: %s", request_id, user_id, report_period_label)
@@ -439,7 +325,7 @@ async def report_period_input(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 
 async def report_type_input(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    request_id = _get_request_id(context)
+    request_id = get_request_id(context)
     user_id = update.effective_user.id
     report_type_label = update.message.text.strip().lower()
     logger.info("[%s][user=%s] Tipo de reporte solicitado: %s", request_id, user_id, report_type_label)
@@ -475,10 +361,10 @@ async def report_type_input(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         )
 
     context.user_data.clear()
-    _end_request(context)
+    end_request(context)
     return ConversationHandler.END
 
-async def percentage_report(update: Update, context: ContextTypes.DEFAULT_TYPE, start_range: str, end_range: str, period_label: str, request_id: str) -> None:
+async def percentage_report(update: Update, context: ContextTypes.DEFAULT_TYPE, start_range: datetime, end_range: datetime, period_label: str, request_id: str) -> None:
     """Show the percentage distribution of expenses for a given period."""
     user_id = update.effective_user.id
     logger.info(
@@ -488,13 +374,8 @@ async def percentage_report(update: Update, context: ContextTypes.DEFAULT_TYPE, 
         period_label
     )
 
-    cursor.execute('''
-        SELECT amount, concept, category, timestamp FROM expense
-        WHERE user_id = ? AND timestamp BETWEEN ? AND ?
-    ''', (user_id, start_range, end_range))
-
-    user_expenses = cursor.fetchall()
-    monthly_limit = _get_monthly_limit(user_id)
+    user_expenses = _get_db().get_expenses_between(user_id, start_range, end_range, ascending=True)
+    monthly_limit = _get_db().get_monthly_limit(user_id)
     limit_text = _format_monthly_limit(monthly_limit)
     logger.info(
         "[%s][user=%s] %d gastos encontrados para reporte porcentual",
@@ -506,9 +387,10 @@ async def percentage_report(update: Update, context: ContextTypes.DEFAULT_TYPE, 
     if user_expenses:
         categories: dict[str, float] = {}
         expenses_sum = 0.0
-        for amount, concept, category, timestamp in user_expenses:
+        for expense in user_expenses:
+            amount = float(expense.amount)
             expenses_sum += amount
-            categories[category] = categories.get(category, 0.0) + amount
+            categories[expense.category] = categories.get(expense.category, 0.0) + amount
         
         message = f"📊 *Reporte porcentual ({period_label})*\n\n"
         sorted_categories = sorted(categories.items(), key=lambda x: x[1], reverse=True)
@@ -531,7 +413,7 @@ async def percentage_report(update: Update, context: ContextTypes.DEFAULT_TYPE, 
         return
 
 
-async def detailed_report(update: Update, context: ContextTypes.DEFAULT_TYPE, start_range: str, end_range: str, period_label: str, request_id: str) -> None:
+async def detailed_report(update: Update, context: ContextTypes.DEFAULT_TYPE, start_range: datetime, end_range: datetime, period_label: str, request_id: str) -> None:
     """Show a tabular detailed report for the selected period."""
     user_id = update.effective_user.id
     logger.info(
@@ -541,14 +423,8 @@ async def detailed_report(update: Update, context: ContextTypes.DEFAULT_TYPE, st
         period_label
     )
 
-    cursor.execute('''
-        SELECT amount, concept, category, timestamp FROM expense
-        WHERE user_id = ? AND timestamp BETWEEN ? AND ?
-        ORDER BY timestamp ASC
-    ''', (user_id, start_range, end_range))
-
-    rows = cursor.fetchall()
-    monthly_limit = _get_monthly_limit(user_id)
+    rows = _get_db().get_expenses_between(user_id, start_range, end_range, ascending=True)
+    monthly_limit = _get_db().get_monthly_limit(user_id)
     limit_text = _format_monthly_limit(monthly_limit)
     logger.info(
         "[%s][user=%s] %d gastos encontrados para reporte detallado",
@@ -574,13 +450,14 @@ async def detailed_report(update: Update, context: ContextTypes.DEFAULT_TYPE, st
     response += separator + "\n"
 
     total = 0.0
-    for idx, (amount, concept, category, timestamp) in enumerate(rows, start=1):
+    for idx, row in enumerate(rows, start=1):
+        amount = float(row.amount)
         response += header_format.format(
             idx,
             f"${amount:.2f}",
-            concept[:18],
-            category.capitalize(),
-            timestamp
+            row.concept[:18],
+            row.category.capitalize(),
+            format_timestamp(row.timestamp),
         ) + "\n"
         total += amount
 
@@ -592,7 +469,7 @@ async def detailed_report(update: Update, context: ContextTypes.DEFAULT_TYPE, st
     await update.message.reply_text(f"```{response}```", parse_mode='Markdown')
 
     try:
-        pdf_path = _build_pdf_report(rows, period_label, limit_text)
+        pdf_path = build_pdf_report(rows, period_label, limit_text)
         if pdf_path:
             filename = f"reporte_detallado_{period_label.replace(' ', '_')}.pdf"
             with open(pdf_path, 'rb') as pdf_file:
@@ -620,7 +497,7 @@ async def detailed_report(update: Update, context: ContextTypes.DEFAULT_TYPE, st
 
 
 async def limit_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    request_id = _start_request(context)
+    request_id = start_request(context)
     user_id = update.effective_user.id
     logger.info("[%s][user=%s] Inicio de configuración de límite mensual", request_id, user_id)
     await update.message.reply_text(
@@ -630,7 +507,7 @@ async def limit_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
 
 
 async def limit_amount_input(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    request_id = _get_request_id(context)
+    request_id = get_request_id(context)
     user_id = update.effective_user.id
     text = update.message.text.strip()
     logger.info("[%s][user=%s] Validando límite mensual ingresado: %s", request_id, user_id, text)
@@ -655,28 +532,26 @@ async def limit_amount_input(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await update.message.reply_text("El límite debe ser menor a $100,000.00. Intenta nuevamente:")
         return LIMIT_AMOUNT
 
-    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    cursor.execute('''
-        INSERT INTO monthly_limit (user_id, limit_amount, updated_at)
-        VALUES (?, ?, ?)
-        ON CONFLICT(user_id) DO UPDATE SET
-            limit_amount = excluded.limit_amount,
-            updated_at = excluded.updated_at
-    ''', (user_id, amount, timestamp))
-    conn.commit()
+    timestamp = pendulum.now("UTC")
+    _get_db().upsert_monthly_limit(user_id, amount, timestamp)
     logger.info("[%s][user=%s] Límite mensual actualizado: %.2f", request_id, user_id, amount)
 
     await update.message.reply_text(
         f"✅ Tu límite mensual quedó establecido en ${amount:.2f}. Puedes actualizarlo cuando quieras usando /limite."
     )
-    _end_request(context)
+    end_request(context)
     return ConversationHandler.END
 
 
 def main() -> None:
     """Start the bot."""
-    # Create the Application
-    application = Application.builder().token("8043472961:AAGjfA10rbimk2DAYANl14LBo5PYGWofjsc").build()
+    try:
+        _get_db().initialize()
+        token = get_bot_token()
+    except ConfigError as error:
+        raise SystemExit(str(error)) from error
+
+    application = Application.builder().token(token).build()
 
     # Add conversation handler for expense tracking
     expense_conversation_handler = ConversationHandler(
