@@ -9,7 +9,9 @@ class ExpenseService:
     def __init__(self, db: DatabaseManager):
         self.db = db
 
-    def create_expense(self, user_id: int, amount: float, concept: str, category: str) -> float:
+    def create_expense(
+        self, user_id: int, amount: float, concept: str, category: str
+    ) -> float:
         """Create an expense and return the updated category total.
 
         Any low-level database errors are surfaced as DatabaseError so callers
@@ -19,7 +21,9 @@ class ExpenseService:
 
         timestamp = pendulum.now("UTC")
         try:
-            self.db.insert_expense(user_id, amount, concept, category.lower(), timestamp)
+            self.db.insert_expense(
+                user_id, amount, concept, category.lower(), timestamp
+            )
             return self.db.get_category_total(user_id, category.lower())
         except DatabaseError:
             # Bubble up; handler layer is responsible for translating this to

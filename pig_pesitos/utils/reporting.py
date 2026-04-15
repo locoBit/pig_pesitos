@@ -57,7 +57,7 @@ def build_pdf_report(rows: list[ExpenseRecord], period_label: str, limit_text: s
             draw_page_header()
         canvas_doc.setFont("Helvetica-Bold" if bold else "Helvetica", 10)
         x = margin
-        for value, width_col in zip(values, column_widths):
+        for value, width_col in zip(values, column_widths, strict=False):
             canvas_doc.drawString(x, y_position, str(value))
             x += width_col
         y_position -= 18

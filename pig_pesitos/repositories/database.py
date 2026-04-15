@@ -1,17 +1,16 @@
 from __future__ import annotations
 
+import logging
+import time
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 from typing import Any
-import logging
-import time
 
 import psycopg
 from psycopg.rows import tuple_row
 
 from pig_pesitos.constants import VALID_CATEGORIES
-
 
 logger = logging.getLogger(__name__)
 
@@ -116,7 +115,9 @@ class DatabaseManager:
         *,
         ignore_conflicts: bool = False,
     ) -> None:
-        conflict_clause = "ON CONFLICT (user_id, created_at) DO NOTHING" if ignore_conflicts else ""
+        conflict_clause = (
+            "ON CONFLICT (user_id, created_at) DO NOTHING" if ignore_conflicts else ""
+        )
         try:
             with self._connect() as conn, conn.cursor() as cursor:
                 cursor.execute(
@@ -188,7 +189,9 @@ class DatabaseManager:
             raise DatabaseError("Error fetching monthly limit") from error
         return float(row[0]) if row else None
 
-    def upsert_monthly_limit(self, user_id: int, limit_amount: float, updated_at: datetime) -> None:
+    def upsert_monthly_limit(
+        self, user_id: int, limit_amount: float, updated_at: datetime
+    ) -> None:
         try:
             with self._connect() as conn, conn.cursor() as cursor:
                 cursor.execute(
@@ -217,7 +220,9 @@ class DatabaseManager:
         try:
             with self._connect() as conn, conn.cursor() as cursor:
                 cursor.execute("DELETE FROM expense WHERE user_id = %s", (user_id,))
-                cursor.execute("DELETE FROM monthly_limit WHERE user_id = %s", (user_id,))
+                cursor.execute(
+                    "DELETE FROM monthly_limit WHERE user_id = %s", (user_id,)
+                )
                 conn.commit()
         except psycopg.Error as error:  # pragma: no cover - network/infra
             logger.exception("Error deleting user data: %s", error)

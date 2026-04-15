@@ -5,7 +5,6 @@ import os
 
 import sentry_sdk
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -21,7 +20,9 @@ def init_sentry() -> None:
         logger.info("Sentry DSN not configured; error monitoring disabled")
         return
 
-    environment = os.getenv("SENTRY_ENVIRONMENT", "development").strip() or "development"
+    environment = (
+        os.getenv("SENTRY_ENVIRONMENT", "development").strip() or "development"
+    )
 
     sentry_sdk.init(
         dsn=dsn,
