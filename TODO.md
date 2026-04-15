@@ -16,7 +16,7 @@ Future tasks for the Pig Pesitos bot so nothing important gets lost in the sauce
   - Create a migration plan for existing data from `expense_data.db`
   - Validate date/time handling and indexes for reports
 
-- [ ] Create unit tests
+- [x] Create unit tests
   - Test amount validation
   - Test concept validation
   - Test category validation
@@ -85,7 +85,7 @@ Future tasks for the Pig Pesitos bot so nothing important gets lost in the sauce
   - Block merges when checks fail
   - Optionally automate deployment
 
-- [ ] Add code quality tooling
+- [x] Add code quality tooling
   - Formatter: `black` or equivalent
   - Linter: `ruff` or equivalent
   - Type checking: `mypy` if practical

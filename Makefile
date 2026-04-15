@@ -3,7 +3,7 @@ PIP ?= $(PYTHON) -m pip
 COMPOSE ?= docker compose
 ALEMBIC ?= alembic
 
-.PHONY: install install-dev db-up db-down db-reset db-logs migrate run db-upgrade db-revision
+.PHONY: install install-dev db-up db-down db-reset db-logs migrate run db-upgrade db-revision test test-coverage
 
 install:
 	$(PIP) install -e .
@@ -34,3 +34,10 @@ db-revision:
 
 run:
 	$(PYTHON) -m pig_pesitos.bot.app
+
+test:
+	$(PYTHON) -m pytest
+
+test-coverage:
+	coverage run -m pytest
+	coverage report -m
