@@ -1,5 +1,4 @@
 import logging
-import os
 
 from telegram.ext import (
     Application,
@@ -10,7 +9,7 @@ from telegram.ext import (
 )
 
 from pig_pesitos.bot.handlers import BotHandlers
-from pig_pesitos.config import ConfigError, get_bot_token, get_database_url
+from pig_pesitos.config import ConfigError, get_log_level, get_settings
 from pig_pesitos.constants import (
     AMOUNT,
     CATEGORY,
@@ -25,7 +24,9 @@ from pig_pesitos.services.expense_service import ExpenseService
 from pig_pesitos.services.report_service import ReportService
 from pig_pesitos.utils.monitoring import init_sentry
 
-LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
+# We resolve logging configuration via the central config module so that
+# environments behave consistently across the project.
+LOG_LEVEL = get_log_level()
 
 logging.basicConfig(
     format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
@@ -52,14 +53,16 @@ async def log_error(update, context) -> None:  # type: ignore[no-untyped-def]
 def build_application() -> Application:
     init_sentry()
 
-    db = DatabaseManager(get_database_url())
+    settings = get_settings()
+
+    db = DatabaseManager(settings["database_url"])  # type: ignore[index]
     try:
         db.initialize()
     except DatabaseError as error:
         raise SystemExit(f"Database initialization failed: {error}") from error
 
     handlers = BotHandlers(ExpenseService(db), ReportService(db))
-    application = Application.builder().token(get_bot_token()).build()
+    application = Application.builder().token(settings["bot_token"]).build()  # type: ignore[index]
     application.add_error_handler(log_error)
 
     expense_conversation_handler = ConversationHandler(
