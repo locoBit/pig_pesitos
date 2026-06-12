@@ -53,7 +53,9 @@ select = ["E", "F", "I", "B", "UP"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
-asyncio_mode = "auto"
+markers = [
+  "integration: marks tests that hit a real database (deselect with -m 'not integration')",
+]
 
 [tool.mypy]
 python_version = "3.11"
@@ -67,7 +69,6 @@ no_implicit_optional = true
 source = ["pig_pesitos"]
 branch = true
 omit = [
-  "pig_pesitos/bot/*",
   "pig_pesitos/repositories/database.py",
 ]
 

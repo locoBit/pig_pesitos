@@ -13,3 +13,5 @@ __pycache__/
 .coverage
 htmlcov/
 .DS_Store
+pig_pesitos.egg-info/
+TODO.md

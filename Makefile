@@ -3,7 +3,7 @@ PIP ?= $(PYTHON) -m pip
 COMPOSE ?= docker compose
 ALEMBIC ?= alembic
 
-.PHONY: install install-dev db-up db-down db-reset db-logs migrate run db-upgrade db-revision test test-coverage
+.PHONY: install install-dev db-up db-down db-reset db-logs migrate run db-upgrade db-revision test test-coverage test-flows
 
 install:
 	$(PIP) install -e .
@@ -37,6 +37,9 @@ run:
 
 test:
 	$(PYTHON) -m pytest
+
+test-flows:
+	$(PYTHON) -m pytest tests/test_handlers_*.py tests/test_application_wiring.py
 
 test-coverage:
 	coverage run -m pytest
