@@ -1,16 +1,16 @@
 """Initial database schema for Pig Pesitos.
 
 Revision ID: 0001_initial_schema
-Revises: 
+Revises:
 Create Date: 2025-05-01 00:00:00
 
 """
 
 from __future__ import annotations
 
-from alembic import op
 import sqlalchemy as sa
 
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "0001_initial_schema"
@@ -49,9 +49,7 @@ def upgrade() -> None:
             nullable=False,
             server_default=sa.text("NOW()"),
         ),
-        sa.CheckConstraint(
-            "limit_amount > 0", name="ck_monthly_limit_amount_positive"
-        ),
+        sa.CheckConstraint("limit_amount > 0", name="ck_monthly_limit_amount_positive"),
     )
 
     op.create_index(

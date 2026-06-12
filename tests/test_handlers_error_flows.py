@@ -1,7 +1,6 @@
 import asyncio
 
 from pig_pesitos.bot.handlers import BotHandlers
-from pig_pesitos.constants import LIMIT_AMOUNT
 
 
 def run(coro):

@@ -66,13 +66,15 @@ def build_pdf_report(rows: list[ExpenseRecord], period_label: str, limit_text: s
     total_amount = 0.0
     for idx, row in enumerate(rows, start=1):
         amount = float(row.amount)
-        draw_row([
-            idx,
-            f"${amount:.2f}",
-            row.concept,
-            row.category.capitalize(),
-            format_timestamp(row.timestamp),
-        ])
+        draw_row(
+            [
+                idx,
+                f"${amount:.2f}",
+                row.concept,
+                row.category.capitalize(),
+                format_timestamp(row.timestamp),
+            ]
+        )
         total_amount += amount
 
     draw_row(["", "", "", "Total", f"${total_amount:.2f}"], bold=True)

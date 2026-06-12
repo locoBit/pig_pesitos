@@ -49,8 +49,12 @@ def test_build_pdf_report_success(monkeypatch, tmp_path) -> None:
         def save(self, *args, **kwargs):  # noqa: N802
             self.calls.append(("save", args, kwargs))
 
-    monkeypatch.setattr("pig_pesitos.utils.reporting.REPORT_PDF_ENABLED", True, raising=False)
-    monkeypatch.setattr("pig_pesitos.utils.reporting.canvas", type("C", (), {"Canvas": DummyCanvas}))
+    monkeypatch.setattr(
+        "pig_pesitos.utils.reporting.REPORT_PDF_ENABLED", True, raising=False
+    )
+    monkeypatch.setattr(
+        "pig_pesitos.utils.reporting.canvas", type("C", (), {"Canvas": DummyCanvas})
+    )
     monkeypatch.setattr("pig_pesitos.utils.reporting.letter", (0, 800))
 
     record = ExpenseRecord(

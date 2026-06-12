@@ -1,5 +1,3 @@
-from datetime import datetime
-
 import pendulum
 
 from pig_pesitos.constants import REPORT_PERIODS
@@ -32,7 +30,9 @@ class FakeDB:
 
 def test_get_period_range_day(monkeypatch) -> None:
     fixed_now = pendulum.datetime(2024, 1, 15, 12, 0, tz="UTC")
-    monkeypatch.setattr("pig_pesitos.services.report_service.pendulum.now", lambda *_: fixed_now)
+    monkeypatch.setattr(
+        "pig_pesitos.services.report_service.pendulum.now", lambda *_: fixed_now
+    )
 
     service = ReportService(FakeDB())
 
@@ -44,7 +44,9 @@ def test_get_period_range_day(monkeypatch) -> None:
 
 def test_get_period_range_month(monkeypatch) -> None:
     fixed_now = pendulum.datetime(2024, 1, 15, 12, 0, tz="UTC")
-    monkeypatch.setattr("pig_pesitos.services.report_service.pendulum.now", lambda *_: fixed_now)
+    monkeypatch.setattr(
+        "pig_pesitos.services.report_service.pendulum.now", lambda *_: fixed_now
+    )
 
     service = ReportService(FakeDB())
 
@@ -56,7 +58,9 @@ def test_get_period_range_month(monkeypatch) -> None:
 
 def test_get_percentage_report_data_includes_limit_and_label(monkeypatch) -> None:
     fixed_now = pendulum.datetime(2024, 1, 10, 12, 0, tz="UTC")
-    monkeypatch.setattr("pig_pesitos.services.report_service.pendulum.now", lambda *_: fixed_now)
+    monkeypatch.setattr(
+        "pig_pesitos.services.report_service.pendulum.now", lambda *_: fixed_now
+    )
 
     db = FakeDB()
     service = ReportService(db)
@@ -70,7 +74,9 @@ def test_get_percentage_report_data_includes_limit_and_label(monkeypatch) -> Non
     db.add_expense(user_id=1, record=record)
     db.set_monthly_limit(1, 100.0)
 
-    expenses, period_label, monthly_limit = service.get_percentage_report_data(1, "month")
+    expenses, period_label, monthly_limit = service.get_percentage_report_data(
+        1, "month"
+    )
 
     assert expenses == [record]
     assert period_label == REPORT_PERIODS["month"]
@@ -79,7 +85,9 @@ def test_get_percentage_report_data_includes_limit_and_label(monkeypatch) -> Non
 
 def test_get_detailed_report_data_uses_same_range(monkeypatch) -> None:
     fixed_now = pendulum.datetime(2024, 1, 10, 12, 0, tz="UTC")
-    monkeypatch.setattr("pig_pesitos.services.report_service.pendulum.now", lambda *_: fixed_now)
+    monkeypatch.setattr(
+        "pig_pesitos.services.report_service.pendulum.now", lambda *_: fixed_now
+    )
 
     db = FakeDB()
     service = ReportService(db)

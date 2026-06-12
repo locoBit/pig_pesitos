@@ -1,5 +1,3 @@
-import os
-
 from pig_pesitos.utils.monitoring import init_sentry
 
 

@@ -1,5 +1,3 @@
-import os
-
 import pytest
 
 from pig_pesitos.config import ConfigError, get_bot_token, get_database_url

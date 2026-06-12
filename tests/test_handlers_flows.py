@@ -1,7 +1,5 @@
 import asyncio
 
-import pytest
-
 from pig_pesitos.bot.handlers import BotHandlers
 from pig_pesitos.constants import (
     AMOUNT,
@@ -63,7 +61,9 @@ class FakeExpenseService:
         self.created: list[tuple[int, float, str, str]] = []
         self.limits: dict[int, float] = {}
 
-    def create_expense(self, user_id: int, amount: float, concept: str, category: str) -> float:
+    def create_expense(
+        self, user_id: int, amount: float, concept: str, category: str
+    ) -> float:
         self.created.append((user_id, amount, concept, category))
         # Just echo amount as total for testing
         return amount
@@ -82,7 +82,9 @@ class FakeExpenseService:
         usage_ratio = getattr(self, "usage_ratio", 0.5)
         return limit, limit * usage_ratio
 
-    def delete_user_data(self, user_id: int) -> None:  # pragma: no cover - not used here
+    def delete_user_data(
+        self, user_id: int
+    ) -> None:  # pragma: no cover - not used here
         self.limits.pop(user_id, None)
 
 

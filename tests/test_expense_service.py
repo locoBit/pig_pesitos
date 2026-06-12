@@ -47,7 +47,9 @@ class SimpleExpense:
 
 def test_create_expense_updates_category_total(monkeypatch) -> None:
     fixed_now = pendulum.datetime(2024, 1, 10, 12, 0, tz="UTC")
-    monkeypatch.setattr("pig_pesitos.services.expense_service.pendulum.now", lambda *_: fixed_now)
+    monkeypatch.setattr(
+        "pig_pesitos.services.expense_service.pendulum.now", lambda *_: fixed_now
+    )
 
     db = FakeDB()
     service = ExpenseService(db)
@@ -60,7 +62,9 @@ def test_create_expense_updates_category_total(monkeypatch) -> None:
 
 def test_get_monthly_usage_without_limit(monkeypatch) -> None:
     fixed_now = pendulum.datetime(2024, 1, 10, 12, 0, tz="UTC")
-    monkeypatch.setattr("pig_pesitos.services.expense_service.pendulum.now", lambda *_: fixed_now)
+    monkeypatch.setattr(
+        "pig_pesitos.services.expense_service.pendulum.now", lambda *_: fixed_now
+    )
 
     db = FakeDB()
     service = ExpenseService(db)
@@ -73,7 +77,9 @@ def test_get_monthly_usage_without_limit(monkeypatch) -> None:
 
 def test_get_monthly_usage_with_expenses(monkeypatch) -> None:
     fixed_now = pendulum.datetime(2024, 1, 15, 12, 0, tz="UTC")
-    monkeypatch.setattr("pig_pesitos.services.expense_service.pendulum.now", lambda *_: fixed_now)
+    monkeypatch.setattr(
+        "pig_pesitos.services.expense_service.pendulum.now", lambda *_: fixed_now
+    )
 
     db = FakeDB()
     service = ExpenseService(db)
@@ -92,7 +98,9 @@ def test_get_monthly_usage_with_expenses(monkeypatch) -> None:
 
 def test_set_and_get_monthly_limit(monkeypatch) -> None:
     fixed_now = pendulum.datetime(2024, 1, 10, 12, 0, tz="UTC")
-    monkeypatch.setattr("pig_pesitos.services.expense_service.pendulum.now", lambda *_: fixed_now)
+    monkeypatch.setattr(
+        "pig_pesitos.services.expense_service.pendulum.now", lambda *_: fixed_now
+    )
 
     db = FakeDB()
     service = ExpenseService(db)

@@ -45,7 +45,9 @@ class LimitAwareExpenseService:
         # Default usage ratio; tests can override.
         self.usage_ratio = 0.95
 
-    def create_expense(self, user_id: int, amount: float, concept: str, category: str) -> float:
+    def create_expense(
+        self, user_id: int, amount: float, concept: str, category: str
+    ) -> float:
         self.created.append((user_id, amount, concept, category))
         return amount
 

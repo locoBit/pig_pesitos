@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import os
 from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config, pool
-from alembic import context
 
+from alembic import context
 from pig_pesitos.config import get_database_url
 
 # this is the Alembic Config object, which provides

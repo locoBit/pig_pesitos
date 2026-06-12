@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import os
 import sqlite3
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from config import get_database_url
-from database_manager import DatabaseManager, VALID_CATEGORIES
+from database_manager import VALID_CATEGORIES, DatabaseManager
 
 
 def _read_sqlite_rows(sqlite_path: str, query: str) -> list[tuple]:
@@ -16,7 +16,7 @@ def _read_sqlite_rows(sqlite_path: str, query: str) -> list[tuple]:
 
 
 def _parse_legacy_timestamp(value: str) -> datetime:
-    return datetime.strptime(value, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+    return datetime.strptime(value, "%Y-%m-%d %H:%M:%S").replace(tzinfo=UTC)
 
 
 LEGACY_CATEGORY_ALIASES = {
@@ -59,7 +59,9 @@ def migrate() -> None:
 
     for user_id, amount, concept, category, timestamp in expense_rows:
         normalized_category = _normalize_legacy_category(category)
-        normalized_category_counts[normalized_category] = normalized_category_counts.get(normalized_category, 0) + 1
+        normalized_category_counts[normalized_category] = (
+            normalized_category_counts.get(normalized_category, 0) + 1
+        )
         postgres_db.insert_expense(
             user_id=int(user_id),
             amount=float(amount),
