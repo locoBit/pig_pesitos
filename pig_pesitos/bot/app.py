@@ -1,18 +1,32 @@
 import logging
-import os
 
-from telegram.ext import Application, CommandHandler, ConversationHandler, MessageHandler, filters
+from telegram.ext import (
+    Application,
+    CommandHandler,
+    ConversationHandler,
+    MessageHandler,
+    filters,
+)
 
-from pig_pesitos.config import ConfigError, get_bot_token, get_database_url
-from pig_pesitos.utils.monitoring import init_sentry
-from pig_pesitos.constants import AMOUNT, CATEGORY, CONCEPT, LIMIT_AMOUNT, REPORT_PERIOD, REPORT_TYPE, FORGET_CONFIRM
 from pig_pesitos.bot.handlers import BotHandlers
+from pig_pesitos.config import ConfigError, get_log_level, get_settings
+from pig_pesitos.constants import (
+    AMOUNT,
+    CATEGORY,
+    CONCEPT,
+    FORGET_CONFIRM,
+    LIMIT_AMOUNT,
+    REPORT_PERIOD,
+    REPORT_TYPE,
+)
 from pig_pesitos.repositories.database import DatabaseError, DatabaseManager
 from pig_pesitos.services.expense_service import ExpenseService
 from pig_pesitos.services.report_service import ReportService
+from pig_pesitos.utils.monitoring import init_sentry
 
-
-LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
+# We resolve logging configuration via the central config module so that
+# environments behave consistently across the project.
+LOG_LEVEL = get_log_level()
 
 logging.basicConfig(
     format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
@@ -39,44 +53,68 @@ async def log_error(update, context) -> None:  # type: ignore[no-untyped-def]
 def build_application() -> Application:
     init_sentry()
 
-    db = DatabaseManager(get_database_url())
+    settings = get_settings()
+
+    db = DatabaseManager(settings["database_url"])  # type: ignore[index]
     try:
         db.initialize()
     except DatabaseError as error:
         raise SystemExit(f"Database initialization failed: {error}") from error
 
     handlers = BotHandlers(ExpenseService(db), ReportService(db))
-    application = Application.builder().token(get_bot_token()).build()
+    application = Application.builder().token(settings["bot_token"]).build()  # type: ignore[index]
     application.add_error_handler(log_error)
 
     expense_conversation_handler = ConversationHandler(
         entry_points=[CommandHandler("gasto", handlers.expense_command)],
         states={
-            AMOUNT: [MessageHandler(filters.TEXT & ~filters.COMMAND, handlers.amount_input)],
-            CONCEPT: [MessageHandler(filters.TEXT & ~filters.COMMAND, handlers.concept_input)],
-            CATEGORY: [MessageHandler(filters.TEXT & ~filters.COMMAND, handlers.category_input)],
+            AMOUNT: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, handlers.amount_input)
+            ],
+            CONCEPT: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, handlers.concept_input)
+            ],
+            CATEGORY: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, handlers.category_input)
+            ],
         },
         fallbacks=[CommandHandler("cancelar", handlers.cancel)],
     )
     report_conversation_handler = ConversationHandler(
         entry_points=[CommandHandler("reporte", handlers.report_command)],
         states={
-            REPORT_PERIOD: [MessageHandler(filters.TEXT & ~filters.COMMAND, handlers.report_period_input)],
-            REPORT_TYPE: [MessageHandler(filters.TEXT & ~filters.COMMAND, handlers.report_type_input)],
+            REPORT_PERIOD: [
+                MessageHandler(
+                    filters.TEXT & ~filters.COMMAND, handlers.report_period_input
+                )
+            ],
+            REPORT_TYPE: [
+                MessageHandler(
+                    filters.TEXT & ~filters.COMMAND, handlers.report_type_input
+                )
+            ],
         },
         fallbacks=[CommandHandler("cancelar", handlers.cancel)],
     )
     limit_conversation_handler = ConversationHandler(
         entry_points=[CommandHandler("limite", handlers.limit_command)],
         states={
-            LIMIT_AMOUNT: [MessageHandler(filters.TEXT & ~filters.COMMAND, handlers.limit_amount_input)],
+            LIMIT_AMOUNT: [
+                MessageHandler(
+                    filters.TEXT & ~filters.COMMAND, handlers.limit_amount_input
+                )
+            ],
         },
         fallbacks=[CommandHandler("cancelar", handlers.cancel)],
     )
     forget_conversation_handler = ConversationHandler(
         entry_points=[CommandHandler("olvidame", handlers.forget_me)],
         states={
-            FORGET_CONFIRM: [MessageHandler(filters.TEXT & ~filters.COMMAND, handlers.forget_me_confirm)],
+            FORGET_CONFIRM: [
+                MessageHandler(
+                    filters.TEXT & ~filters.COMMAND, handlers.forget_me_confirm
+                )
+            ],
         },
         fallbacks=[CommandHandler("cancelar", handlers.cancel)],
     )

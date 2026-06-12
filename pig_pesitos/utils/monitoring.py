@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import logging
-import os
 
 import sentry_sdk
+
+from pig_pesitos.config import get_sentry_dsn, get_sentry_environment
 
 logger = logging.getLogger(__name__)
 
@@ -12,17 +13,16 @@ def init_sentry() -> None:
     """Initialize Sentry error monitoring if a DSN is configured.
 
     This is intentionally minimal: it only reports unhandled exceptions. If
-    `SENTRY_DSN` is not set, this function is a no-op.
+    ``SENTRY_DSN`` is not set, this function is a no-op. Environment naming is
+    centralized via :mod:`pig_pesitos.config`.
     """
 
-    dsn = os.getenv("SENTRY_DSN", "").strip()
+    dsn = get_sentry_dsn()
     if not dsn:
         logger.info("Sentry DSN not configured; error monitoring disabled")
         return
 
-    environment = (
-        os.getenv("SENTRY_ENVIRONMENT", "development").strip() or "development"
-    )
+    environment = get_sentry_environment()
 
     sentry_sdk.init(
         dsn=dsn,

@@ -26,16 +26,19 @@ def test_build_application_registers_handlers_and_error_handler(monkeypatch):
         def initialize(self):  # pragma: no cover - trivial
             return None
 
-    def fake_get_db_url():  # pragma: no cover - trivial
-        return "postgresql://user:pass@localhost:5432/db"
-
-    def fake_get_token():  # pragma: no cover - trivial
-        return "123:ABC"
+    def fake_get_settings():  # pragma: no cover - trivial
+        return {
+            "database_url": "postgresql://user:pass@localhost:5432/db",
+            "bot_token": "123:ABC",
+            "environment": "test",
+            "log_level": "DEBUG",
+            "sentry_dsn": None,
+            "sentry_environment": "test",
+        }
 
     # Patch dependencies used inside build_application
     monkeypatch.setattr("pig_pesitos.bot.app.DatabaseManager", DummyDB)
-    monkeypatch.setattr("pig_pesitos.bot.app.get_database_url", fake_get_db_url)
-    monkeypatch.setattr("pig_pesitos.bot.app.get_bot_token", fake_get_token)
+    monkeypatch.setattr("pig_pesitos.bot.app.get_settings", fake_get_settings)
 
     app = build_application()
     assert isinstance(app, Application)

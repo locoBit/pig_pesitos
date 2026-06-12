@@ -4,8 +4,11 @@ from datetime import datetime, timedelta
 import pendulum
 import pytest
 
-from pig_pesitos.repositories.database import DatabaseError, DatabaseManager, ExpenseRecord
-
+from pig_pesitos.repositories.database import (
+    DatabaseError,
+    DatabaseManager,
+    ExpenseRecord,
+)
 
 pytestmark = pytest.mark.integration
 
@@ -14,7 +17,9 @@ pytestmark = pytest.mark.integration
 def db_url() -> str:
     url = os.getenv("TEST_DATABASE_URL") or os.getenv("DATABASE_URL")
     if not url:
-        pytest.skip("TEST_DATABASE_URL or DATABASE_URL must be set for DB integration tests")
+        pytest.skip(
+            "TEST_DATABASE_URL or DATABASE_URL must be set for DB integration tests"
+        )
     return url
 
 

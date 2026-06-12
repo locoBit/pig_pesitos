@@ -52,7 +52,9 @@ class FakeExpenseRecord:
 
 
 class ReportServiceWithData:
-    def __init__(self, expenses, period_label: str = "este mes", limit: float | None = None):
+    def __init__(
+        self, expenses, period_label: str = "este mes", limit: float | None = None
+    ):
         self.expenses = expenses
         self.period_label = period_label
         self.limit = limit
@@ -77,7 +79,9 @@ def test_percentage_report_includes_limit_and_percentages(monkeypatch) -> None:
         FakeExpenseRecord(10.0, "a", "alimentos", datetime(2024, 1, 1)),
         FakeExpenseRecord(20.0, "b", "alimentos", datetime(2024, 1, 2)),
     ]
-    report_service = ReportServiceWithData(expenses, period_label="este mes", limit=100.0)
+    report_service = ReportServiceWithData(
+        expenses, period_label="este mes", limit=100.0
+    )
     handlers = BotHandlers(NoOpExpenseService(), report_service)
 
     update = DummyUpdate(text="Porcentajes", user_id=1)
@@ -104,7 +108,9 @@ def test_detailed_report_sends_text_and_pdf(monkeypatch, tmp_path) -> None:
         FakeExpenseRecord(5.0, "cena", "alimentos", datetime(2024, 1, 3)),
         FakeExpenseRecord(15.5, "luz", "servicios", datetime(2024, 1, 4)),
     ]
-    report_service = ReportServiceWithData(expenses, period_label="este mes", limit=None)
+    report_service = ReportServiceWithData(
+        expenses, period_label="este mes", limit=None
+    )
     handlers = BotHandlers(NoOpExpenseService(), report_service)
 
     # Patch build_pdf_report to create a dummy file
@@ -113,7 +119,9 @@ def test_detailed_report_sends_text_and_pdf(monkeypatch, tmp_path) -> None:
     dummy_pdf = tmp_path / "dummy.pdf"
     dummy_pdf.write_bytes(b"fake-pdf")
 
-    def fake_build_pdf_report(rows, period_label, limit_text):  # pragma: no cover - simple stub
+    def fake_build_pdf_report(
+        rows, period_label, limit_text
+    ):  # pragma: no cover - simple stub
         assert rows == expenses
         return str(dummy_pdf)
 

@@ -22,6 +22,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install .[dev]
 
+      - name: Run Ruff (lint)
+        run: |
+          ruff check .
+
+      - name: Check formatting with Black
+        run: |
+          black --check .
+
       - name: Run tests (no DB / no integration)
         run: |
           pytest -m "not integration"

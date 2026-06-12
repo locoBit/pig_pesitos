@@ -13,10 +13,14 @@ from pig_pesitos.constants import (
 def validate_amount(text: str) -> tuple[bool, str | None, float | None]:
     value = text.strip()
     if not re.match(AMOUNT_PATTERN, value):
-        return False, (
-            "Formato inválido del monto. Por favor escribe un número positivo "
-            "con máximo dos decimales (ejemplo: 12.50):"
-        ), None
+        return (
+            False,
+            (
+                "Formato inválido del monto. Por favor escribe un número positivo "
+                "con máximo dos decimales (ejemplo: 12.50):"
+            ),
+            None,
+        )
 
     amount = float(value)
     if amount <= 0:
@@ -33,10 +37,14 @@ def validate_amount(text: str) -> tuple[bool, str | None, float | None]:
 def validate_limit_amount(text: str) -> tuple[bool, str | None, float | None]:
     value = text.strip()
     if not re.match(AMOUNT_PATTERN, value):
-        return False, (
-            "Formato inválido. Escribe un número positivo con máximo dos "
-            "decimales (ejemplo: 1250.75):"
-        ), None
+        return (
+            False,
+            (
+                "Formato inválido. Escribe un número positivo con máximo dos "
+                "decimales (ejemplo: 1250.75):"
+            ),
+            None,
+        )
 
     amount = float(value)
     if amount <= 0:
